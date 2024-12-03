@@ -8,6 +8,7 @@ fn main() {
     let mut result2: u32 = 0;
     let mut disabled = false;
 
+    // https://regexper.com/#%28mul%5C%28%28%5B0-9%5D%7B1%2C3%7D%29%2C%28%5B0-9%5D%7B1%2C3%7D%29%5C%29%7Cdo%5C%28%5C%29%7Cdon't%5C%28%5C%29%29
     let re = Regex::new(r"(mul\(([0-9]{1,3}),([0-9]{1,3})\)|do\(\)|don't\(\))").unwrap();
     let matches = re.captures_iter(&content);
     for m in matches {
