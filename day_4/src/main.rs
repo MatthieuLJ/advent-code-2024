@@ -95,28 +95,18 @@ fn search_for_xmas(data: &Vec<Vec<char>>, starting: (usize, usize), direction: (
     let (x, y) = starting;
     let (dx, dy) = direction;
 
-    if data[y][x] == 'X'
+    data[y][x] == 'X'
         && data[(y as i32 + dy) as usize][(x as i32 + dx) as usize] == 'M'
         && data[(y as i32 + 2 * dy) as usize][(x as i32 + 2 * dx) as usize] == 'A'
         && data[(y as i32 + 3 * dy) as usize][(x as i32 + 3 * dx) as usize] == 'S'
-    {
-        true
-    } else {
-        false
-    }
 }
 
 fn search_for_x_mas(data: &Vec<Vec<char>>, starting: (usize, usize)) -> bool {
     let (x, y) = starting;
 
-    if data[y][x] == 'A'
+    data[y][x] == 'A'
         && ((data[y - 1][x - 1] == 'M' && data[y + 1][x + 1] == 'S')
             || (data[y - 1][x - 1] == 'S' && data[y + 1][x + 1] == 'M'))
         && ((data[y - 1][x + 1] == 'M' && data[y + 1][x - 1] == 'S')
             || (data[y - 1][x + 1] == 'S' && data[y + 1][x - 1] == 'M'))
-    {
-        true
-    } else {
-        false
-    }
 }
