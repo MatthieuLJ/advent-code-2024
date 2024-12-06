@@ -10,13 +10,18 @@ fn main() {
     //println!("Got print_list: {:?}", print_list);
 
     let mut result: usize = 0;
+    let mut result2: usize = 0;
 
-    for update in print_list {
-        if verify_update(&antecedants, &update) {
-            result += update.get((update.len()-1)/2).unwrap();
+    for mut update in print_list {
+        if let Ok(r) = verify_update(&antecedants, &update) {
+            result += r;
+        } else {
+            fix_update(&antecedants, &mut update);
+            result2 += update.get((update.len() - 1) / 2).unwrap();
         }
     }
     println!("Result: {}", result);
+    println!("Result2: {}", result2);
 }
 
 fn read_file(antecedants: &mut HashMap<usize, Vec<usize>>, print_list: &mut Vec<Vec<usize>>) {
@@ -48,19 +53,60 @@ fn read_file(antecedants: &mut HashMap<usize, Vec<usize>>, print_list: &mut Vec<
     }
 }
 
-fn verify_update(antecedants: &HashMap<usize, Vec<usize>>, update: &Vec<usize>) -> bool {
+fn verify_update<'a>(
+    antecedants: &HashMap<usize, Vec<usize>>,
+    update: &'a Vec<usize>,
+) -> Result<&'a usize, (usize, usize)> {
     for (index, p) in update.iter().enumerate() {
         for next_index in index + 1..update.len() {
-            let next = update.get(next_index).unwrap();
             match antecedants.get(p) {
                 None => continue,
                 Some(v) => {
+                    let next = update.get(next_index).unwrap();
                     if v.contains(next) {
-                        return false;
+                        return Err((index, next_index));
                     }
                 }
             }
         }
     }
-    true
+    Ok(update.get((update.len() - 1) / 2).unwrap())
+}
+
+fn fix_update(antecedants: &HashMap<usize, Vec<usize>>, update: &mut Vec<usize>) {
+    let mut index: usize = 0;
+
+    //println!("Fixing {:?}", update);
+
+    // if there is a loop in the antecedants, we're toast!
+
+    'outer: loop {
+        let p:&usize = update.get(index).unwrap();
+
+        for next_index in index + 1..update.len() {
+            match antecedants.get(p) {
+                None => continue,
+                Some(v) => {
+                    let next = update.get(next_index).unwrap();
+                    if v.contains(next) {
+                        drop(p);
+                        // swap index and next_index and redo the verification
+                        let next_value = update.remove(next_index);
+                        let previous_value = update.remove(index);
+                        update.insert(index, next_value);
+                        update.insert(next_index, previous_value);
+
+                        index = 0;
+                        continue 'outer;
+                    }
+                }
+            }
+        }
+
+        index += 1;
+        if index == update.len()-1 {
+            //println!("Got {:?}", update);
+            return;
+        }
+    }
 }
