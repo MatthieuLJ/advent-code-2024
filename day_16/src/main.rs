@@ -1,5 +1,5 @@
 use std::cmp::Reverse;
-use std::collections::BinaryHeap;
+use std::collections::{BinaryHeap, HashSet, VecDeque};
 use std::fs::read_to_string;
 use std::u32;
 
@@ -29,17 +29,15 @@ fn main() {
 
     let mut heap: BinaryHeap<Reverse<Progress>> = BinaryHeap::new();
     let mut path: Vec<Vec<Progress>> = Vec::new();
+    let mut from: Vec<Vec<HashSet<(usize, usize)>>> = Vec::new();
 
     for r in 0..maze.len() {
         let mut path_line: Vec<Progress> = Vec::new();
+        let mut from_line: Vec<HashSet<(usize, usize)>> = Vec::new();
         for c in 0..maze[r].len() {
+            let from_cell: HashSet<(usize, usize)> = HashSet::new();
+            from_line.push(from_cell);
             if maze[r][c] == 'S' {
-                heap.push(Reverse(Progress {
-                    col: c,
-                    row: r,
-                    cost: 0,
-                    heading: Heading::EAST,
-                }));
                 let empty_path: Progress = Progress {
                     col: c,
                     row: r,
@@ -47,6 +45,12 @@ fn main() {
                     heading: Heading::EAST,
                 };
                 path_line.push(empty_path);
+                heap.push(Reverse(Progress {
+                    col: c,
+                    row: r,
+                    cost: 0,
+                    heading: Heading::EAST,
+                }));
             } else {
                 let empty_path: Progress = Progress {
                     col: c,
@@ -57,8 +61,12 @@ fn main() {
                 path_line.push(empty_path);
             }
         }
+        from.push(from_line);
         path.push(path_line);
     }
+
+    let mut destination_e: (usize, usize) = (0, 0);
+    let mut max_distance: u32 = u32::MAX;
 
     let result = loop {
         let cheapest = heap.pop();
@@ -68,7 +76,15 @@ fn main() {
                 let x = space.0.col;
                 let y = space.0.row;
                 let cost = space.0.cost;
-                let dir = space.0.heading;
+                let dir = &space.0.heading;
+
+                if cost > max_distance {
+                    break (
+                        path[destination_e.1][destination_e.0].cost,
+                        trace_source(destination_e, &from),
+                    );
+                }
+
                 // check to the right
                 if maze[y][x + 1] != '#' {
                     let new_cost = match dir {
@@ -77,6 +93,9 @@ fn main() {
                         Heading::SOUTH => cost + 1001,
                         Heading::WEST => cost + 2001,
                     };
+                    if path[y][x + 1].cost != u32::MAX && new_cost == path[y][x + 1].cost + 1000 {
+                        from[y][x + 1].insert((x, y));
+                    }
                     if new_cost < path[y][x + 1].cost {
                         path[y][x + 1] = Progress {
                             col: x + 1,
@@ -90,35 +109,44 @@ fn main() {
                             cost: new_cost,
                             heading: Heading::EAST,
                         }));
+                        from[y][x + 1].insert((x, y));
                     }
-                    if maze[y][x+1] == 'E' {
-                        break new_cost;
+
+                    if maze[y][x + 1] == 'E' {
+                        destination_e = (x + 1, y);
+                        max_distance = new_cost;
                     }
                 }
                 // check above
-                if maze[y-1][x] != '#' {
+                if maze[y - 1][x] != '#' {
                     let new_cost = match dir {
                         Heading::EAST => cost + 1001,
                         Heading::NORTH => cost + 1,
                         Heading::SOUTH => cost + 2001,
                         Heading::WEST => cost + 1001,
                     };
-                    if new_cost < path[y-1][x ].cost {
-                        path[y-1][x] = Progress {
+                    if path[y - 1][x].cost != u32::MAX && new_cost == path[y - 1][x].cost + 1000 {
+                        from[y - 1][x].insert((x, y));
+                    }
+                    if new_cost < path[y - 1][x].cost {
+                        path[y - 1][x] = Progress {
                             col: x,
-                            row: y-1,
+                            row: y - 1,
                             cost: new_cost,
                             heading: Heading::NORTH,
                         };
                         heap.push(Reverse(Progress {
                             col: x,
-                            row: y-1,
+                            row: y - 1,
                             cost: new_cost,
                             heading: Heading::NORTH,
                         }));
+                        from[y - 1][x].insert((x, y));
                     }
-                    if maze[y-1][x] == 'E' {
-                        break new_cost;
+
+                    if maze[y - 1][x] == 'E' {
+                        destination_e = (x, y - 1);
+                        max_distance = new_cost;
                     }
                 }
 
@@ -130,6 +158,9 @@ fn main() {
                         Heading::SOUTH => cost + 1001,
                         Heading::WEST => cost + 1,
                     };
+                    if path[y][x - 1].cost != u32::MAX && new_cost == path[y][x - 1].cost + 1000 {
+                        from[y][x - 1].insert((x, y));
+                    }
                     if new_cost < path[y][x - 1].cost {
                         path[y][x - 1] = Progress {
                             col: x - 1,
@@ -143,43 +174,73 @@ fn main() {
                             cost: new_cost,
                             heading: Heading::WEST,
                         }));
+                        from[y][x - 1].insert((x, y));
                     }
-                    if maze[y][x-1] == 'E' {
-                        break new_cost;
+
+                    if maze[y][x - 1] == 'E' {
+                        destination_e = (x - 1, y);
+                        max_distance = new_cost;
                     }
                 }
 
                 // check below
-                if maze[y+1][x] != '#' {
+                if maze[y + 1][x] != '#' {
                     let new_cost = match dir {
                         Heading::EAST => cost + 1001,
                         Heading::NORTH => cost + 2001,
                         Heading::SOUTH => cost + 1,
                         Heading::WEST => cost + 1001,
                     };
-                    if new_cost < path[y+1][x ].cost {
-                        path[y+1][x] = Progress {
+                    if path[y + 1][x].cost != u32::MAX && new_cost == path[y + 1][x].cost + 1000 {
+                        from[y + 1][x].insert((x, y));
+                    }
+                    if new_cost < path[y + 1][x].cost {
+                        path[y + 1][x] = Progress {
                             col: x,
-                            row: y+1,
+                            row: y + 1,
                             cost: new_cost,
                             heading: Heading::SOUTH,
                         };
                         heap.push(Reverse(Progress {
                             col: x,
-                            row: y+1,
+                            row: y + 1,
                             cost: new_cost,
                             heading: Heading::SOUTH,
                         }));
+                        from[y + 1][x].insert((x, y));
                     }
-                    if maze[y+1][x] == 'E' {
-                        break new_cost;
+
+                    if maze[y + 1][x] == 'E' {
+                        destination_e = (x, y + 1);
+                        max_distance = new_cost;
                     }
                 }
             }
         }
     };
 
-    println!("Result: {}", result);
+    println!("Result: {} with {} seats", result.0, result.1.len());
+}
+
+fn trace_source(
+    at: (usize, usize),
+    from: &Vec<Vec<HashSet<(usize, usize)>>>,
+) -> HashSet<(usize, usize)> {
+    let mut result: HashSet<(usize, usize)> = HashSet::new();
+    let mut to_process : VecDeque<(usize,usize)> = VecDeque::new();
+
+    to_process.push_back(at);
+
+    while to_process.len() > 0 {
+        let next_seat = to_process.pop_front().unwrap();
+        if !result.contains(&next_seat) {
+            result.insert(next_seat);
+            for n in &from[next_seat.1][next_seat.0] {
+                to_process.push_back(*n);
+            }
+        }
+    }
+    result
 }
 
 impl Ord for Progress {
