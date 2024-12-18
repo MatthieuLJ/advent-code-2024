@@ -19,7 +19,7 @@ struct Progress {
 }
 
 fn main() {
-    let input_data = read_to_string("input_test.txt").expect("Cannot read input file");
+    let input_data = read_to_string("input.txt").expect("Cannot read input file");
     let mut maze: Vec<Vec<char>> = Vec::new();
 
     for l in input_data.lines() {
@@ -106,14 +106,15 @@ fn main() {
                     let mut new_trail = trail.clone();
                     new_trail.insert((x + 1, y));
 
-                    add_progress((x + 1, y), new_cost, &Heading::EAST, &new_trail, &mut path);
-                    heap.push(Reverse(Progress {
-                        col: x + 1,
-                        row: y,
-                        cost: new_cost,
-                        trail: new_trail.clone(),
-                        heading: Heading::EAST,
-                    }));
+                    if add_progress((x + 1, y), new_cost, &Heading::EAST, &new_trail, &mut path) {
+                        heap.push(Reverse(Progress {
+                            col: x + 1,
+                            row: y,
+                            cost: new_cost,
+                            trail: new_trail.clone(),
+                            heading: Heading::EAST,
+                        }));
+                    }
 
                     if maze[y][x + 1] == 'E' {
                         destination_e = (x + 1, y);
@@ -131,14 +132,15 @@ fn main() {
                     let mut new_trail = trail.clone();
                     new_trail.insert((x, y - 1));
 
-                    add_progress((x, y - 1), new_cost, &Heading::SOUTH, &new_trail, &mut path);
-                    heap.push(Reverse(Progress {
-                        col: x,
-                        row: y - 1,
-                        cost: new_cost,
-                        trail: new_trail.clone(),
-                        heading: Heading::NORTH,
-                    }));
+                    if add_progress((x, y - 1), new_cost, &Heading::SOUTH, &new_trail, &mut path) {
+                        heap.push(Reverse(Progress {
+                            col: x,
+                            row: y - 1,
+                            cost: new_cost,
+                            trail: new_trail.clone(),
+                            heading: Heading::NORTH,
+                        }));
+                    }
 
                     if maze[y - 1][x] == 'E' {
                         destination_e = (x, y - 1);
@@ -157,14 +159,15 @@ fn main() {
                     let mut new_trail = trail.clone();
                     new_trail.insert((x - 1, y));
 
-                    add_progress((x - 1, y), new_cost, &Heading::WEST, &new_trail, &mut path);
-                    heap.push(Reverse(Progress {
-                        col: x - 1,
-                        row: y,
-                        cost: new_cost,
-                        trail: new_trail.clone(),
-                        heading: Heading::WEST,
-                    }));
+                    if add_progress((x - 1, y), new_cost, &Heading::WEST, &new_trail, &mut path) {
+                        heap.push(Reverse(Progress {
+                            col: x - 1,
+                            row: y,
+                            cost: new_cost,
+                            trail: new_trail.clone(),
+                            heading: Heading::WEST,
+                        }));
+                    }
 
                     if maze[y][x - 1] == 'E' {
                         destination_e = (x - 1, y);
@@ -183,15 +186,15 @@ fn main() {
                     let mut new_trail = trail.clone();
                     new_trail.insert((x, y + 1));
 
-                    add_progress((x, y + 1), new_cost, &Heading::SOUTH, &new_trail, &mut path);
-
-                    heap.push(Reverse(Progress {
-                        col: x,
-                        row: y + 1,
-                        cost: new_cost,
-                        trail: new_trail.clone(),
-                        heading: Heading::SOUTH,
-                    }));
+                    if add_progress((x, y + 1), new_cost, &Heading::SOUTH, &new_trail, &mut path) {
+                        heap.push(Reverse(Progress {
+                            col: x,
+                            row: y + 1,
+                            cost: new_cost,
+                            trail: new_trail.clone(),
+                            heading: Heading::SOUTH,
+                        }));
+                    }
 
                     if maze[y + 1][x] == 'E' {
                         destination_e = (x, y + 1);
@@ -211,15 +214,20 @@ fn add_progress(
     heading: &Heading,
     trail: &HashSet<(usize, usize)>,
     path: &mut Vec<Vec<Vec<Progress>>>,
-) {
+) -> bool {
+    let mut min_cost = u32::MAX;
     for i in 0..path[at.1][at.0].len() {
+        if path[at.1][at.0][i].cost < min_cost {
+            min_cost = path[at.1][at.0][i].cost;
+        }
         if path[at.1][at.0][i].heading == *heading {
             // now compare and pick the one with the cheapest "cost" then return
             if path[at.1][at.0][i].cost < cost {
-                return;
+                return false;
             } else if path[at.1][at.0][i].cost == cost {
                 // if equal, add the trail
                 path[at.1][at.0][i].trail.extend(trail);
+                return true;
             } else {
                 // replace with the new progress
                 path[at.1][at.0][i] = Progress {
@@ -229,16 +237,23 @@ fn add_progress(
                     heading: heading.clone(),
                     trail: trail.clone(),
                 };
+                return true;
             }
         }
     }
-    path[at.1][at.0].push(Progress {
-        col: at.0,
-        row: at.1,
-        cost,
-        heading: heading.clone(),
-        trail: trail.clone(),
-    });
+    if min_cost == u32::MAX || cost <= min_cost + 1000 {
+        // only add this direction if it's not too expansive
+        path[at.1][at.0].push(Progress {
+            col: at.0,
+            row: at.1,
+            cost,
+            heading: heading.clone(),
+            trail: trail.clone(),
+        });
+        return true;
+    } else {
+        return false;
+    }
 }
 
 impl Ord for Progress {
