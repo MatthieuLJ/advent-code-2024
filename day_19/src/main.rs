@@ -11,24 +11,22 @@ fn main() {
 
     let mut result: u32 = 0;
     while let Some(towel) = data_lines_iter.next() {
-        if match_towel_patterns(&patterns, towel) {
-            result += 1;
-        }
+        result += match_towel_patterns(&patterns, towel);
+        println!("\r{}", result);
     }
 
     println!("Result: {}", result);
 }
 
-fn match_towel_patterns(patterns: &Vec<&str>, towel: &str) -> bool {
+fn match_towel_patterns(patterns: &Vec<&str>, towel: &str) -> u32 {
     if towel == "" {
-        return true;
+        return 1;
     }
+    let mut result: u32 = 0;
     for p in patterns {
         if let Some(short_towel) = towel.strip_prefix(p) {
-            if match_towel_patterns(patterns, short_towel) {
-                return true;
-            }
+            result += match_towel_patterns(patterns, short_towel);
         }
     }
-    return false;
+    return result;
 }
