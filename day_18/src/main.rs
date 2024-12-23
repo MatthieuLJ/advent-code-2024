@@ -8,29 +8,47 @@ struct Reach {
     cost: u32,
 }
 
+const GRID_SIZE: usize = 71;
+const MAX_CORRUPTION: usize = 1024;
+
 fn main() {
-    let mut grid: Vec<Vec<i32>> = Vec::new(); // -1 for wall, distance from start otherwise, initialized at i32::MAX
-    const GRID_SIZE: usize = 71;
-    const MAX_CORRUPTION: usize = 1024;
-
-    for _r in 0..GRID_SIZE {
-        let grid_row: Vec<i32> = vec![i32::MAX; GRID_SIZE + 1];
-        grid.push(grid_row);
-    }
-
     let input_data = read_to_string("input.txt").expect("Cannot read input file");
+    let total_lines = input_data.lines().collect::<Vec<&str>>().len();
     let re_coords = Regex::new(r"(\d+),(\d+)").unwrap();
+    let mut corruptions: Vec<(usize, usize)> = Vec::new();
 
-    for (row_num, coords_string) in input_data.lines().enumerate() {
-        if row_num >= MAX_CORRUPTION {
-            break;
-        }
+    for coords_string in input_data.lines() {
         let matches = re_coords.captures(coords_string).unwrap();
         let x = matches[1].parse::<usize>().unwrap();
         let y = matches[2].parse::<usize>().unwrap();
-        grid[y][x] = -1;
+        corruptions.push((x, y));
     }
 
+    let mut min_time = MAX_CORRUPTION;
+    let mut max_time = total_lines;
+    while max_time > min_time + 1 {
+        let mid_time = min_time + (max_time - min_time) / 2;
+        let mut grid: Vec<Vec<i32>> = Vec::new(); // -1 for wall, distance from start otherwise, initialized at i32::MAX
+
+        for _r in 0..GRID_SIZE {
+            let grid_row: Vec<i32> = vec![i32::MAX; GRID_SIZE + 1];
+            grid.push(grid_row);
+        }
+
+        for i in 0..mid_time {
+            grid[corruptions[i].1][corruptions[i].0] = -1;
+        }
+        let found = find_path(&mut grid);
+        match found {
+         None => {max_time = mid_time; println!("Less than {}", mid_time);},
+         Some(x) => {min_time = mid_time; println!("More than {} (found a path in {})", mid_time,x);},
+        }
+    }
+    println!("{:?}", corruptions[min_time]);
+
+}
+
+fn find_path(grid: &mut Vec<Vec<i32>>) -> Option<u32> {
     let mut heap: BinaryHeap<Reverse<Reach>> = BinaryHeap::new();
     grid[0][0] = 0;
     heap.push(Reverse(Reach {
@@ -39,10 +57,12 @@ fn main() {
         cost: 0,
     }));
 
-    let result = loop {
+    loop {
         let cheapest = heap.pop();
         match cheapest {
-            None => panic!(),
+            None => {
+                break None;
+            }
             Some(space) => {
                 let x = space.0.col;
                 let y = space.0.row;
@@ -60,7 +80,7 @@ fn main() {
 
                 if y < GRID_SIZE - 1 && grid[y + 1][x] == i32::MAX {
                     if y == GRID_SIZE - 2 && x == GRID_SIZE - 1 {
-                        break cost + 1;
+                        break Some(cost + 1);
                     }
                     grid[y + 1][x] = cost as i32 + 1;
                     heap.push(Reverse(Reach {
@@ -81,7 +101,7 @@ fn main() {
 
                 if x < GRID_SIZE - 1 && grid[y][x + 1] == i32::MAX {
                     if y == GRID_SIZE - 1 && x == GRID_SIZE - 2 {
-                        break cost + 1;
+                        break Some(cost + 1);
                     }
                     grid[y][x + 1] = cost as i32 + 1;
                     heap.push(Reverse(Reach {
@@ -92,8 +112,7 @@ fn main() {
                 }
             }
         }
-    };
-    println!("Result: {}", result);
+    }
 }
 
 impl Ord for Reach {
