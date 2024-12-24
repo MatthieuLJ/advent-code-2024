@@ -19,7 +19,6 @@ fn main() {
     let mut result1: u32 = 0;
     let mut result2: u64 = 0;
     while let Some(towel) = data_lines_iter.next() {
-        println!("{}", towel);
         if match_towel_patterns_bool(&patterns, towel) {
             result1 += 1;
             result2 += match_towel_patterns(&trie, &mut known_strings, towel);
