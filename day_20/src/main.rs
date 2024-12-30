@@ -4,7 +4,7 @@ use std::{
     fs::read_to_string,
 };
 
-const TUNNEL_LENGTH: isize = 20;
+const TUNNEL_LENGTH: isize = 22;
 
 fn main() {
     let input_data = read_to_string("input_test.txt").expect("Cannot read input file");
@@ -188,11 +188,13 @@ fn main() {
                 }
             }
         }
-        for (k, v) in cheats.clone() {
-            if v > 75 {
-                println!("Saved {} from {},{} to {},{}", v, k.0, k.1, k.2, k.3);
-            }
-        }
+    }
+    let mut result: HashMap<u32,u32> = HashMap::new();
+    for (k, v) in &cheats {
+        result.entry(*v).and_modify(|count| *count += 1).or_insert(1);
+    }
+    for s in 68..=76 {
+        println!("Saved {} with {} routes", s, result.get(&s).unwrap_or(&0));
     }
 }
 
