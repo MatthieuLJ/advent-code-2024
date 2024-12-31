@@ -1,13 +1,13 @@
 use std::{
-    cmp::{max, Reverse},
+    cmp::Reverse,
     collections::{BinaryHeap, HashMap},
     fs::read_to_string,
 };
 
-const TUNNEL_LENGTH: isize = 22;
+const TUNNEL_LENGTH: u32 = 20;
 
 fn main() {
-    let input_data = read_to_string("input_test.txt").expect("Cannot read input file");
+    let input_data = read_to_string("input.txt").expect("Cannot read input file");
     let mut grid: Vec<Vec<char>> = Vec::new();
     let mut start_coords = (0, 0);
     let mut end_coords = (0, 0);
@@ -36,186 +36,65 @@ fn main() {
     let total_distance = distance_from_start[end_coords.1][end_coords.0];
     let mut cheats: HashMap<(usize, usize, usize, usize), u32> = HashMap::new();
 
-    for (row, l) in grid.clone().into_iter().enumerate() {
-        //if row == 0 || row == grid.len() - 1 {
-        //    continue;
-        //}
-        for (col, c) in l.into_iter().enumerate() {
-            //if col == 0 || col == grid[row].len() - 1 {
-            //    continue;
-            //}
+    for (row_start, l) in grid.clone().into_iter().enumerate() {
+        for (col_start, c) in l.into_iter().enumerate() {
             if c == '#' {
-                // start the tunnel from there
-                let mut shortest_to_start = u32::MAX;
-                let mut shortest_start_point: (usize, usize) = (0, 0);
-
-                if row > 0 && distance_from_start[row - 1][col] < shortest_to_start {
-                    shortest_start_point = (col, row - 1);
-                    shortest_to_start = distance_from_start[row - 1][col];
-                }
-                if row < grid.len() - 1 && distance_from_start[row + 1][col] < shortest_to_start {
-                    shortest_start_point = (col, row + 1);
-                    shortest_to_start = distance_from_start[row + 1][col];
-                }
-                if col > 0 && distance_from_start[row][col - 1] < shortest_to_start {
-                    shortest_start_point = (col - 1, row);
-                    shortest_to_start = distance_from_start[row][col - 1];
-                }
-                if col < grid[row].len() - 1
-                    && distance_from_start[row][col + 1] < shortest_to_start
-                {
-                    shortest_start_point = (col + 1, row);
-                    shortest_to_start = distance_from_start[row][col + 1];
-                }
-
-                if shortest_to_start == u32::MAX {
-                    continue;
-                }
-
-                let mut heap: BinaryHeap<Reverse<Reach>> = BinaryHeap::new();
-                heap.push(Reverse(Reach { col, row, cost: 1 }));
-                let mut visited: Vec<Vec<bool>> = Vec::new();
-                for another_row in 0..grid.len() {
-                    let not_visited: Vec<bool> = vec![false; grid[another_row].len()];
-                    visited.push(not_visited);
-                }
-                visited[row][col] = true;
-                loop {
-                    let cheapest = heap.pop();
-                    match cheapest {
-                        None => {
-                            break;
-                        }
-                        Some(space) => {
-                            let x = space.0.col;
-                            let y = space.0.row;
-                            let cost = space.0.cost;
-
-                            // look up
-                            if y >= 1 && !visited[y - 1][x] {
-                                if cost < TUNNEL_LENGTH as u32 {
-                                    heap.push(Reverse(Reach {
-                                        col: x,
-                                        row: y - 1,
-                                        cost: cost + 1,
-                                    }));
-                                }
-                                if grid[y - 1][x] != '#' {
-                                    check_on_path(
-                                        &distance_from_end,
-                                        x,
-                                        y - 1,
-                                        shortest_to_start,
-                                        cost,
-                                        total_distance,
-                                        &mut cheats,
-                                        shortest_start_point,
-                                    );
-                                }
-                                visited[y - 1][x] = true;
-                            }
-                            // look down
-                            if y <= grid.len() - 2 && !visited[y + 1][x] {
-                                if cost < TUNNEL_LENGTH as u32 {
-                                    heap.push(Reverse(Reach {
-                                        col: x,
-                                        row: y + 1,
-                                        cost: cost + 1,
-                                    }));
-                                }
-                                if grid[y + 1][x] != '#' {
-                                    check_on_path(
-                                        &distance_from_end,
-                                        x,
-                                        y + 1,
-                                        shortest_to_start,
-                                        cost,
-                                        total_distance,
-                                        &mut cheats,
-                                        shortest_start_point,
-                                    );
-                                }
-                                visited[y + 1][x] = true;
-                            }
-                            // look right
-                            if x <= grid[0].len() - 2 && !visited[y][x + 1] {
-                                if cost < TUNNEL_LENGTH as u32 {
-                                    heap.push(Reverse(Reach {
-                                        col: x + 1,
-                                        row: y,
-                                        cost: cost + 1,
-                                    }));
-                                }
-                                if grid[y][x + 1] != '#' {
-                                    check_on_path(
-                                        &distance_from_end,
-                                        x + 1,
-                                        y,
-                                        shortest_to_start,
-                                        cost,
-                                        total_distance,
-                                        &mut cheats,
-                                        shortest_start_point,
-                                    );
-                                }
-                                visited[y][x + 1] = true;
-                            }
-                            // look left
-                            if x >= 1 && !visited[y][x - 1] {
-                                if cost < TUNNEL_LENGTH as u32 {
-                                    heap.push(Reverse(Reach {
-                                        col: x - 1,
-                                        row: y,
-                                        cost: cost + 1,
-                                    }));
-                                }
-                                if grid[y][x - 1] != '#' {
-                                    check_on_path(
-                                        &distance_from_end,
-                                        x - 1,
-                                        y,
-                                        shortest_to_start,
-                                        cost,
-                                        total_distance,
-                                        &mut cheats,
-                                        shortest_start_point,
-                                    );
-                                }
-                                visited[y][x - 1] = true;
-                            }
-                        }
+                continue;
+            }
+            // scan for the end of the tunnel
+            for row_end in 0..grid.len() {
+                for col_end in 0..grid[row_end].len() {
+                    if grid[row_end][col_end] == '#' {
+                        continue;
                     }
+
+                    // calculate the saving
+                    let cheat_length = ((col_end as isize - col_start as isize).abs()
+                        + (row_end as isize - row_start as isize).abs())
+                        as u32;
+
+                    if cheat_length > TUNNEL_LENGTH {
+                        continue;
+                    }
+
+                    let new_distance = distance_from_start[row_start][col_start]
+                        + cheat_length
+                        + distance_from_end[row_end][col_end];
+
+                    if new_distance > total_distance {
+                        continue;
+                    }
+
+                    cheats.insert((col_start, row_start, col_end, row_end), total_distance - new_distance);
                 }
             }
         }
     }
-    let mut result: HashMap<u32,u32> = HashMap::new();
+    /*
+    let mut result: HashMap<u32, u32> = HashMap::new();
     for (k, v) in &cheats {
-        result.entry(*v).and_modify(|count| *count += 1).or_insert(1);
+        result
+            .entry(*v)
+            .and_modify(|count| *count += 1)
+            .or_insert(1);
+        if *v == 70 {
+            println!("Saved 72 with route from ({},{}) to ({},{})", k.1, k.0, k.3, k.2);
+        }
     }
-    for s in 68..=76 {
+    for s in 50..=76 {
         println!("Saved {} with {} routes", s, result.get(&s).unwrap_or(&0));
     }
+    */
+    let mut result: u32 = 0;
+    for (_k, v) in &cheats {
+        if *v >= 100 {
+            result += 1;
+        }
+    }
+    println!("Found {} paths saving more than 100 ps", result);
+    
 }
 
-fn check_on_path(
-    distance_from_end: &Vec<Vec<u32>>,
-    x: usize,
-    y: usize,
-    shortest_to_start: u32,
-    cost: u32,
-    total_distance: u32,
-    cheats: &mut HashMap<(usize, usize, usize, usize), u32>,
-    shortest_start_point: (usize, usize),
-) {
-    if total_distance > shortest_to_start + distance_from_end[y][x] + cost + 1 {
-        let save = total_distance - (shortest_to_start + distance_from_end[y][x] + cost + 1);
-        cheats
-            .entry((shortest_start_point.0, shortest_start_point.1, x, y))
-            .and_modify(|s| *s = max(*s, save))
-            .or_insert(save);
-    }
-}
 
 #[derive(Debug)]
 struct Reach {
