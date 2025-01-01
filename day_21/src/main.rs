@@ -1,25 +1,67 @@
 use std::collections::HashMap;
 use std::fs::read_to_string;
 
+const NUM_ROBOTS: u32 = 25;
+const ITERATION_SIZE: u32 = 5;
+
 fn main() {
     let input_data = read_to_string("input.txt").expect("Cannot read input file");
-    let mut result = 0;
+    let mut result: u64 = 0;
+
+    let mut cache: HashMap<(String, u32), u64> = HashMap::new();
 
     for l in input_data.lines() {
-        let robot1 = get_program_for_code(l);
-        let robot2 = get_program_for_directions(&robot1);
-        let final_sequence = get_program_for_directions(&robot2);
+        let initial_code = get_program_for_code(l);
+        let sequences: Vec<&str> = initial_code.split_inclusive('A').collect();
+        let mut code_length: u64 = 0;
+        println!("Code: {}", l);
 
-        let numeric_value = l[0..l.len()-1].parse::<u32>().unwrap();
+        for (i, s) in (&sequences).into_iter().enumerate() {
+            println!("{} of {}", i, sequences.len());
+            code_length += get_code_length(s, NUM_ROBOTS, &mut cache);
+        }
 
-        println!("For code {}, got value {} and length {}", &l, numeric_value, final_sequence.len());
-        println!("robot1: [{}]\nrobot2: [{}]\n final: [{}]", robot1, robot2, final_sequence);
-        
-        result += numeric_value * final_sequence.len() as u32;
+        let numeric_value = l[0..l.len() - 1].parse::<u64>().unwrap();
+
+        result += numeric_value * code_length;
     }
 
     println!("Final result {}", result);
-    
+}
+
+fn get_robot_chain(code: &str) -> String {
+    // 5 robots in the general case, 1 for the part 1
+    if ITERATION_SIZE == 5 {
+        return get_program_for_directions(&get_program_for_directions(
+            &get_program_for_directions(&get_program_for_directions(&get_program_for_directions(
+                &code,
+            ))),
+        ));
+    } else {
+        return get_program_for_directions(&code);
+    }
+}
+
+fn get_code_length(code: &str, level: u32, cache: &mut HashMap<(String, u32), u64>) -> u64 {
+    if level == 0 {
+        return code.len() as u64;
+    }
+
+    let next_level_code = get_robot_chain(code);
+    let sequences: Vec<&str> = next_level_code.split_inclusive('A').collect();
+    let mut result: u64 = 0;
+    for s in &sequences {
+        let sequence_string = String::from(*s);
+        if cache.contains_key(&(sequence_string.clone(), level)) {
+            result += cache[&(sequence_string, level)];
+        } else {
+            let code_length: u64 = get_code_length(s, level - ITERATION_SIZE, cache);
+            cache.insert((sequence_string, level), code_length);
+            result += code_length
+        }
+    }
+
+    result
 }
 
 // +---+---+---+
@@ -36,40 +78,40 @@ fn get_program_for_code(codes: &str) -> String {
         // first character in the sequence, going from "A"
         ("A", vec![""]),
         ("0", vec!["<"]),
-        ("1", vec!["^<<"]),
+        ("1", vec!["^<<"]), //
         ("2", vec!["<^", "^<"]),
         ("3", vec!["^"]),
-        ("4", vec!["^^<<"]),
+        ("4", vec!["^^<<"]), //
         ("5", vec!["<^^", "^^<"]),
         ("6", vec!["^^"]),
-        ("7", vec!["^^^<<"]),
+        ("7", vec!["^^^<<"]), //
         ("8", vec!["<^^^", "^^^<"]),
         ("9", vec!["^^^"]),
         // transitions from one key to another
         ("AA", vec![""]),
         ("A0", vec!["<"]),
-        ("A1", vec!["^<<"]),
+        ("A1", vec!["^<<"]), //
         ("A2", vec!["<^", "^<"]),
         ("A3", vec!["^"]),
-        ("A4", vec!["^^<<"]),
+        ("A4", vec!["^^<<"]), //
         ("A5", vec!["<^^", "^^<"]),
         ("A6", vec!["^^"]),
-        ("A7", vec!["^^^<<"]),
+        ("A7", vec!["^^^<<"]), //
         ("A8", vec!["<^^^", "^^^<"]),
         ("A9", vec!["^^^"]),
         ("0A", vec![">"]),
         ("00", vec![""]),
-        ("01", vec!["^<"]),
+        ("01", vec!["^<"]), //
         ("02", vec!["^"]),
         ("03", vec!["^>", ">^"]),
-        ("04", vec!["^^<"]),
+        ("04", vec!["^^<"]), //
         ("05", vec!["^^"]),
         ("06", vec!["^^>", ">^^"]),
-        ("07", vec!["^^^<"]),
+        ("07", vec!["^^^<"]), //
         ("08", vec!["^^^"]),
         ("09", vec!["^^^>", ">^^^"]),
-        ("1A", vec![">>v", "v>>"]),
-        ("10", vec![">v"]),
+        ("1A", vec![">>v", "v>>"]), //
+        ("10", vec![">v"]), //
         ("11", vec![""]),
         ("12", vec![">"]),
         ("13", vec![">>"]),
@@ -77,16 +119,16 @@ fn get_program_for_code(codes: &str) -> String {
         ("15", vec!["^>", ">^"]),
         ("16", vec!["^>>", ">>^"]),
         ("17", vec!["^^"]),
-        ("18", vec![">^^", ">^^"]),
-        ("19", vec![">>^^", "^^>>"]),
-        ("2A", vec![">v", "v>"]),
+        ("18", vec![ "^^>", ">^^"]),
+        ("19", vec!["^^>>", ">>^^"]),
+        ("2A", vec!["v>", ">v"]),
         ("20", vec!["v"]),
         ("21", vec!["<"]),
         ("22", vec![""]),
         ("23", vec![">"]),
         ("24", vec!["<^", "^<"]),
         ("25", vec!["^"]),
-        ("26", vec![">^", "^>"]),
+        ("26", vec!["^>", ">^"]),
         ("27", vec!["<^^", "^^<"]),
         ("28", vec!["^^"]),
         ("29", vec!["^^>", ">^^"]),
@@ -101,8 +143,8 @@ fn get_program_for_code(codes: &str) -> String {
         ("37", vec!["<<^^", "^^<<"]),
         ("38", vec!["<^^", "^^<"]),
         ("39", vec!["^^"]),
-        ("4A", vec![">>vv"]),
-        ("40", vec![">vv"]),
+        ("4A", vec![">>vv"]), //
+        ("40", vec![">vv"]), //
         ("41", vec!["v"]),
         ("42", vec!["v>", ">v"]),
         ("43", vec!["v>>", ">>v"]),
@@ -111,7 +153,7 @@ fn get_program_for_code(codes: &str) -> String {
         ("46", vec![">>"]),
         ("47", vec!["^"]),
         ("48", vec!["^>", ">^"]),
-        ("49", vec!["^>>", ">>^"]),
+        ("49", vec![">>^", "^>>"]),
         ("5A", vec!["vv>", ">vv"]),
         ("50", vec!["vv"]),
         ("51", vec!["<v", "v<"]),
@@ -134,8 +176,8 @@ fn get_program_for_code(codes: &str) -> String {
         ("67", vec!["<<^", "^<<"]),
         ("68", vec!["<^", "^<"]),
         ("69", vec!["^"]),
-        ("7A", vec![">>vvv"]),
-        ("70", vec![">vvv", "vvv>"]),
+        ("7A", vec![">>vvv"]), //
+        ("70", vec![">vvv", "vvv>"]), //
         ("71", vec!["vv"]),
         ("72", vec!["vv>", ">vv"]),
         ("73", vec!["vv>>", ">>vv"]),
@@ -147,7 +189,7 @@ fn get_program_for_code(codes: &str) -> String {
         ("79", vec![">>"]),
         ("8A", vec!["vvv>", ">vvv"]),
         ("80", vec!["vvv"]),
-        ("81", vec!["vv<", "<vv"]),
+        ("81", vec!["<vv", "vv<"]),
         ("82", vec!["vv"]),
         ("83", vec!["vv>", ">vv"]),
         ("84", vec!["<v", "v<"]),
@@ -169,13 +211,11 @@ fn get_program_for_code(codes: &str) -> String {
         ("99", vec![""]),
     ]);
 
-    
     let mut result = String::new();
     result.push_str(sequence[&codes[0..1]][0]);
     result.push('A');
-    for n in 0..codes.len()-1 {
-        println!("Looking for code {}", &codes[n..n+2]);
-        result.push_str(sequence[&codes[n..n+2]][0]);
+    for n in 0..codes.len() - 1 {
+        result.push_str(sequence[&codes[n..n + 2]][0]);
         result.push('A');
     }
 
@@ -192,32 +232,32 @@ fn get_program_for_directions(codes: &str) -> String {
         // first character in the sequence, going from "A"
         ("A", vec![""]),
         ("^", vec!["<"]),
-        ("<", vec!["v<<"]),
+        ("<", vec!["v<<"]), //
         ("v", vec!["<v", "v<"]),
         (">", vec!["v"]),
         // transitions from one key to another
         ("AA", vec![""]),
         ("A^", vec!["<"]),
-        ("A<", vec!["v<<"]),
+        ("A<", vec!["v<<"]), //
         ("Av", vec!["<v", "v<"]),
         ("A>", vec!["v"]),
         ("^A", vec![">"]),
         ("^^", vec![""]),
-        ("^<", vec!["v<"]),
-        ("^v", vec!["v"]),
+        ("^<", vec!["v<"]), //
+        //("^v", vec!["v"]),
         ("^>", vec!["v>", ">v"]),
-        ("<A", vec![">>^"]),
-        ("<^", vec![">^"]),
+        ("<A", vec![">>^"]), //
+        ("<^", vec![">^"]), //
         ("<<", vec![""]),
         ("<v", vec![">"]),
-        ("<>", vec![">>"]),
-        ("vA", vec![">^", "^>"]),
+        //("<>", vec![">>"]),
+        ("vA", vec!["^>", ">^"]),
         ("v<", vec!["<"]),
         ("vv", vec![""]),
         ("v>", vec![">"]),
         (">A", vec!["^"]),
-        (">^", vec!["^<", "<^"]),
-        ("><", vec!["<<"]),
+        (">^", vec!["<^", "^<"]),
+        //("><", vec!["<<"]),
         (">v", vec!["<"]),
         (">>", vec![""]),
     ]);
@@ -225,8 +265,8 @@ fn get_program_for_directions(codes: &str) -> String {
     let mut result = String::new();
     result.push_str(sequence[&codes[0..1]][0]);
     result.push('A');
-    for n in 0..codes.len()-1 {
-        result.push_str(sequence[&codes[n..n+2]][0]);
+    for n in 0..codes.len() - 1 {
+        result.push_str(sequence[&codes[n..n + 2]][0]);
         result.push('A');
     }
 
